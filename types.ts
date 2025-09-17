@@ -1,4 +1,11 @@
 
+export interface Participant {
+  id: string;
+  name: string;
+}
+
+export type WorkshopStatus = 'not_started' | 'in_progress' | 'completed';
+
 export interface StickyNoteType {
   id: string;
   text: string;

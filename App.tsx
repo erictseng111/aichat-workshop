@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import type { StickyNoteType, IntentType, FlowchartType } from './types';
+
+import React, { useState } from 'react';
 import Stage1Panel from './components/Stage1Panel';
 import Stage2Panel from './components/Stage2Panel';
 import Stage3Panel from './components/Stage3Panel';
 import Stage4Panel from './components/Stage4Panel';
 import Timer from './components/Timer';
+import LoginScreen from './components/LoginScreen';
+import ParticipantAvatars from './components/ParticipantAvatars';
+import { useWorkshopState } from './hooks/useWorkshopState';
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon } from './components/icons';
 
 const STAGE_CONFIG = [
@@ -14,64 +17,61 @@ const STAGE_CONFIG = [
   { id: 4, title: "總結與後續步驟", duration: 15 },
 ];
 
-const WORKSHOP_STAGE_KEY = 'workshop_current_stage';
-
 function App() {
-  const [isFacilitator] = useState(() => 
-    new URLSearchParams(window.location.search).get('role') === 'facilitator'
-  );
+  const [localParticipantId, setLocalParticipantId] = useState(() => sessionStorage.getItem('participantId'));
+  const [isFacilitator] = useState(() => new URLSearchParams(window.location.search).get('role') === 'facilitator');
 
-  const [currentStage, setCurrentStage] = useState(() => {
-    const savedStage = localStorage.getItem(WORKSHOP_STAGE_KEY);
-    return savedStage ? parseInt(savedStage, 10) : 1;
-  });
+  const {
+    state,
+    addParticipant,
+    setWorkshopStatus,
+    setCurrentStage,
+    setStickyNotes,
+    setIntents,
+    setFlowcharts
+  } = useWorkshopState();
 
-  const [isWorkshopComplete, setIsWorkshopComplete] = useState(false);
+  const { status, currentStage, participants, stickyNotes, intents, flowcharts } = state;
 
-  // Shared state for the entire workshop
-  const [stickyNotes, setStickyNotes] = useState<StickyNoteType[]>([]);
-  const [intents, setIntents] = useState<IntentType[]>([]);
-  const [flowcharts, setFlowcharts] = useState<FlowchartType[]>([]);
+  const handleJoin = (name: string) => {
+    const newParticipant = addParticipant(name);
+    sessionStorage.setItem('participantId', newParticipant.id);
+    setLocalParticipantId(newParticipant.id);
+  };
 
-  // Effect to handle real-time synchronization via localStorage
-  useEffect(() => {
-    // When a facilitator is present, they establish the current stage in localStorage.
-    if (isFacilitator) {
-      localStorage.setItem(WORKSHOP_STAGE_KEY, String(currentStage));
-    }
-    
-    // Participants listen for changes from the facilitator.
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === WORKSHOP_STAGE_KEY && e.newValue) {
-        const newStage = parseInt(e.newValue, 10);
-        if (!isNaN(newStage)) {
-          setCurrentStage(newStage);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [isFacilitator, currentStage]);
-  
-  const currentConfig = STAGE_CONFIG.find(s => s.id === currentStage) || STAGE_CONFIG[0];
+  const handleStart = () => {
+    setWorkshopStatus('in_progress');
+  };
 
   const goToNextStage = () => {
     if (!isFacilitator) return;
-    if (currentStage === STAGE_CONFIG.length) {
-      setIsWorkshopComplete(true);
+    if (currentStage < STAGE_CONFIG.length) {
+      setCurrentStage(currentStage + 1);
     } else {
-      setCurrentStage(prev => prev + 1);
+      setWorkshopStatus('completed');
     }
   };
+
   const goToPrevStage = () => {
     if (!isFacilitator) return;
-    setCurrentStage(prev => (prev > 1 ? prev - 1 : prev));
+    setCurrentStage(Math.max(1, currentStage - 1));
   };
+
+  if (status === 'not_started') {
+    return (
+      <LoginScreen
+        isFacilitator={isFacilitator}
+        participants={participants}
+        onJoin={handleJoin}
+        onStart={handleStart}
+        hasJoined={!!participants.find(p => p.id === localParticipantId)}
+      />
+    );
+  }
   
+  const currentConfig = STAGE_CONFIG.find(s => s.id === currentStage) || STAGE_CONFIG[0];
+  const isWorkshopComplete = status === 'completed';
+
   return (
     <div className="min-h-screen p-4 sm:p-8 lg:p-12">
       <div className="max-w-7xl mx-auto">
@@ -87,9 +87,10 @@ function App() {
                         {STAGE_CONFIG.map((stage, index) => {
                             const isCompleted = currentStage > stage.id;
                             const isCurrent = currentStage === stage.id;
+                            const isParticipantAndLocked = !isFacilitator && !isCurrent;
 
                             return (
-                                <li key={stage.id} className={`flex items-center ${index < STAGE_CONFIG.length - 1 ? 'flex-1' : ''}`}>
+                                <li key={stage.id} className={`flex items-center ${index < STAGE_CONFIG.length - 1 ? 'flex-1' : ''} transition-opacity ${isParticipantAndLocked ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                                     <div className="flex flex-col items-center text-center">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg transition-all duration-300
                                             ${isCompleted ? 'bg-indigo-600 text-white' : ''}
@@ -103,7 +104,7 @@ function App() {
                                     
                                     {index < STAGE_CONFIG.length - 1 && (
                                         <div className="flex-1 h-1 bg-slate-200 mx-4 relative">
-                                            <div className={`absolute top-0 left-0 h-1 bg-indigo-600 transition-all duration-500 ${isCompleted ? 'w-full' : 'w-0'}`}></div>
+                                            <div className={`absolute top-0 left-0 h-1 bg-indigo-600 transition-all duration-500 ${currentStage > stage.id ? 'w-full' : 'w-0'}`}></div>
                                         </div>
                                     )}
                                 </li>
@@ -111,8 +112,9 @@ function App() {
                         })}
                     </ol>
                 </div>
-                <div className="pl-8 ml-8 border-l border-slate-200">
+                 <div className="pl-8 ml-8 border-l border-slate-200 flex flex-col items-center gap-y-4">
                     <Timer title="階段計時器" durationInMinutes={currentConfig.duration} key={currentStage} />
+                    <ParticipantAvatars participants={participants} />
                 </div>
             </div>
         </div>
@@ -145,7 +147,7 @@ function App() {
               </button>
             </>
           ) : (
-             <p className="text-slate-500 italic">等待主持人引導至下一步...</p>
+             <p className="text-slate-500 italic animate-pulse">等待主持人引導至下一步...</p>
           )}
         </footer>
       </div>

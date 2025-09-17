@@ -23,7 +23,6 @@ const ActivityDescription: React.FC<{ title: string; duration: number; descripti
     </div>
 );
 
-// FIX: Define Stage1PanelProps interface to type the component's props.
 interface Stage1PanelProps {
   stickyNotes: StickyNoteType[];
   setStickyNotes: React.Dispatch<React.SetStateAction<StickyNoteType[]>>;
@@ -35,6 +34,10 @@ const Stage1Panel: React.FC<Stage1PanelProps> = ({ stickyNotes, setStickyNotes, 
   const [activity, setActivity] = useState<1 | 2>(1);
   const [newNoteText, setNewNoteText] = useState('');
   const [newIntentName, setNewIntentName] = useState('');
+  
+  // State for drag & drop UI feedback
+  const [dragTarget, setDragTarget] = useState<string | null>(null);
+  const [lastDroppedNoteId, setLastDroppedNoteId] = useState<string | null>(null);
 
   const addStickyNote = () => {
     if (newNoteText.trim() === '') return;
@@ -68,6 +71,7 @@ const Stage1Panel: React.FC<Stage1PanelProps> = ({ stickyNotes, setStickyNotes, 
 
   const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
     e.currentTarget.style.opacity = '1';
+    setDragTarget(null); // Clean up drag target on drag end
   };
   
   const handleDropOnIntent = (e: React.DragEvent<HTMLDivElement>, intentId: string) => {
@@ -76,6 +80,9 @@ const Stage1Panel: React.FC<Stage1PanelProps> = ({ stickyNotes, setStickyNotes, 
     setStickyNotes(prevNotes => prevNotes.map(note =>
       note.id === noteId ? { ...note, intentId } : note
     ));
+    setDragTarget(null);
+    setLastDroppedNoteId(noteId);
+    setTimeout(() => setLastDroppedNoteId(null), 500);
   };
   
   const handleDropOnBoard = (e: React.DragEvent<HTMLDivElement>) => {
@@ -84,6 +91,9 @@ const Stage1Panel: React.FC<Stage1PanelProps> = ({ stickyNotes, setStickyNotes, 
     setStickyNotes(prevNotes => prevNotes.map(note =>
       note.id === noteId ? { ...note, intentId: null } : note
     ));
+    setDragTarget(null);
+    setLastDroppedNoteId(noteId);
+    setTimeout(() => setLastDroppedNoteId(null), 500);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -150,17 +160,19 @@ const Stage1Panel: React.FC<Stage1PanelProps> = ({ stickyNotes, setStickyNotes, 
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
              <div 
-                className="col-span-1 md:col-span-2 lg:col-span-3 p-4 bg-slate-100/70 rounded-lg border-2 border-dashed border-slate-300 min-h-[150px]"
+                className={`col-span-1 md:col-span-2 lg:col-span-3 p-4 rounded-lg border-2 min-h-[150px] transition-all duration-300 ${dragTarget === 'unclassified-board' ? 'border-solid ring-2 ring-indigo-400 bg-indigo-50' : 'border-dashed border-slate-300 bg-slate-100/70'}`}
                 onDrop={handleDropOnBoard}
                 onDragOver={handleDragOver}
+                onDragEnter={() => setDragTarget('unclassified-board')}
+                onDragLeave={() => setDragTarget(null)}
              >
                 <h4 className="font-bold text-slate-700 mb-3 text-center">未分類便利貼</h4>
                 <div className="flex flex-wrap gap-3 justify-center">
-                    {unclassifiedNotes.map((note, index) => {
+                    {unclassifiedNotes.map((note) => {
                       const style = NOTE_STYLES[stickyNotes.findIndex(sn => sn.id === note.id) % NOTE_STYLES.length];
                       return (
                         <div key={note.id} draggable onDragStart={(e) => handleDragStart(e, note.id)} onDragEnd={handleDragEnd}
-                             className={`p-3 rounded-md shadow-sm cursor-grab ${style.bg} ${style.border} ${style.text} ${style.rotate} border`}>
+                             className={`p-3 rounded-md shadow-sm cursor-grab ${style.bg} ${style.border} ${style.text} ${style.rotate} border ${lastDroppedNoteId === note.id ? 'animate-drop-in' : ''}`}>
                             {note.text}
                         </div>
                       )
@@ -170,17 +182,19 @@ const Stage1Panel: React.FC<Stage1PanelProps> = ({ stickyNotes, setStickyNotes, 
             {intents.map((intent) => (
               <div 
                 key={intent.id} 
-                className="bg-white p-4 rounded-xl shadow-md border-t-4 border-indigo-500"
+                className={`p-4 rounded-xl border-t-4 border-indigo-500 transition-all duration-300 ${dragTarget === intent.id ? 'ring-2 ring-indigo-400 scale-105 shadow-xl' : 'bg-white shadow-md'}`}
                 onDrop={(e) => handleDropOnIntent(e, intent.id)}
                 onDragOver={handleDragOver}
+                onDragEnter={() => setDragTarget(intent.id)}
+                onDragLeave={() => setDragTarget(null)}
               >
                 <h4 className="font-bold text-lg text-slate-800 mb-3">{intent.name}</h4>
                 <div className="space-y-2 min-h-[100px]">
-                    {stickyNotes.filter(note => note.intentId === intent.id).map((note, index) => {
+                    {stickyNotes.filter(note => note.intentId === intent.id).map((note) => {
                       const style = NOTE_STYLES[stickyNotes.findIndex(sn => sn.id === note.id) % NOTE_STYLES.length];
                       return (
                         <div key={note.id} draggable onDragStart={(e) => handleDragStart(e, note.id)} onDragEnd={handleDragEnd}
-                            className={`p-3 rounded-md shadow-sm cursor-grab ${style.bg} ${style.border} ${style.text} ${style.rotate} border`}>
+                            className={`p-3 rounded-md shadow-sm cursor-grab ${style.bg} ${style.border} ${style.text} ${style.rotate} border ${lastDroppedNoteId === note.id ? 'animate-drop-in' : ''}`}>
                             {note.text}
                         </div>
                       )
