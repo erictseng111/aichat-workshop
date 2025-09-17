@@ -1,0 +1,5 @@
+{
+  "name": "AI Workshop Facilitator",
+  "description": "An interactive web application to guide teams through a structured workshop for designing task-oriented dialogue systems, from brainstorming pain points to prioritizing solutions.",
+  "requestFramePermissions": []
+}
