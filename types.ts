@@ -1,7 +1,7 @@
-
 export interface Participant {
   id: string;
   name: string;
+  isFacilitator: boolean;
 }
 
 export type WorkshopStatus = 'not_started' | 'in_progress' | 'completed';
@@ -36,4 +36,9 @@ export interface FlowchartType {
   steps: FlowStepType[];
   matrixPosition: MatrixQuadrant | null;
   votes: number;
+}
+
+export interface FlowchartEditorState {
+  selectedIntentId: string;
+  currentSteps: FlowStepType[];
 }

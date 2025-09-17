@@ -19,7 +19,6 @@ const STAGE_CONFIG = [
 
 function App() {
   const [localParticipantId, setLocalParticipantId] = useState(() => sessionStorage.getItem('participantId'));
-  const [isFacilitator] = useState(() => new URLSearchParams(window.location.search).get('role') === 'facilitator');
 
   const {
     state,
@@ -28,10 +27,15 @@ function App() {
     setCurrentStage,
     setStickyNotes,
     setIntents,
-    setFlowcharts
+    setFlowcharts,
+    setFlowchartEditor,
+    setIsVoting,
   } = useWorkshopState();
 
-  const { status, currentStage, participants, stickyNotes, intents, flowcharts } = state;
+  const { status, currentStage, participants, stickyNotes, intents, flowcharts, flowchartEditor, isVoting } = state;
+
+  const localParticipant = participants.find(p => p.id === localParticipantId);
+  const isFacilitator = localParticipant?.isFacilitator || false;
 
   const handleJoin = (name: string) => {
     const newParticipant = addParticipant(name);
@@ -54,6 +58,10 @@ function App() {
 
   const goToPrevStage = () => {
     if (!isFacilitator) return;
+    // If the workshop was completed, going back puts it back in progress.
+    if (status === 'completed') {
+      setWorkshopStatus('in_progress');
+    }
     setCurrentStage(Math.max(1, currentStage - 1));
   };
 
@@ -64,7 +72,7 @@ function App() {
         participants={participants}
         onJoin={handleJoin}
         onStart={handleStart}
-        hasJoined={!!participants.find(p => p.id === localParticipantId)}
+        hasJoined={!!localParticipant}
       />
     );
   }
@@ -121,8 +129,8 @@ function App() {
         
         <main>
           {currentStage === 1 && <Stage1Panel stickyNotes={stickyNotes} setStickyNotes={setStickyNotes} intents={intents} setIntents={setIntents} />}
-          {currentStage === 2 && <Stage2Panel intents={intents} stickyNotes={stickyNotes} flowcharts={flowcharts} setFlowcharts={setFlowcharts} />}
-          {currentStage === 3 && <Stage3Panel flowcharts={flowcharts} setFlowcharts={setFlowcharts} />}
+          {currentStage === 2 && <Stage2Panel intents={intents} stickyNotes={stickyNotes} flowcharts={flowcharts} setFlowcharts={setFlowcharts} flowchartEditor={flowchartEditor} setFlowchartEditor={setFlowchartEditor} />}
+          {currentStage === 3 && <Stage3Panel flowcharts={flowcharts} setFlowcharts={setFlowcharts} isVoting={isVoting} setIsVoting={setIsVoting} isFacilitator={isFacilitator} />}
           {currentStage === 4 && <Stage4Panel flowcharts={flowcharts} />}
         </main>
         

@@ -1,6 +1,5 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import type { StickyNoteType, IntentType, FlowchartType, Participant, WorkshopStatus } from '../types';
+import type { StickyNoteType, IntentType, FlowchartType, Participant, WorkshopStatus, FlowchartEditorState } from '../types';
 
 const WORKSHOP_STATE_KEY = 'workshop_global_state';
 
@@ -11,13 +10,15 @@ interface WorkshopState {
   stickyNotes: StickyNoteType[];
   intents: IntentType[];
   flowcharts: FlowchartType[];
+  flowchartEditor: FlowchartEditorState;
+  isVoting: boolean;
 }
 
 const getInitialState = (): WorkshopState => {
   try {
     const item = localStorage.getItem(WORKSHOP_STATE_KEY);
     // Start with a few items for demonstration purposes if storage is empty
-    return item ? JSON.parse(item) : { 
+    const defaultState = { 
         status: 'not_started',
         currentStage: 1,
         participants: [],
@@ -27,8 +28,19 @@ const getInitialState = (): WorkshopState => {
             { id: 'note-3', text: 'How can I reset my password?', intentId: null },
         ], 
         intents: [], 
-        flowcharts: [] 
+        flowcharts: [],
+        flowchartEditor: {
+          selectedIntentId: '',
+          currentSteps: [],
+        },
+        isVoting: false,
     };
+    
+    const storedState = item ? JSON.parse(item) : {};
+
+    // Merge stored state with default, ensuring new properties exist
+    return { ...defaultState, ...storedState };
+
   } catch (error) {
     console.error("Error reading from localStorage", error);
     return { 
@@ -37,7 +49,12 @@ const getInitialState = (): WorkshopState => {
         participants: [],
         stickyNotes: [], 
         intents: [], 
-        flowcharts: [] 
+        flowcharts: [],
+        flowchartEditor: {
+          selectedIntentId: '',
+          currentSteps: [],
+        },
+        isVoting: false,
     };
   }
 };
@@ -97,7 +114,11 @@ export const useWorkshopState = () => {
   };
 
   const addParticipant = (name: string): Participant => {
-    const newParticipant: Participant = { id: `user-${Date.now()}`, name };
+    const newParticipant: Participant = { 
+      id: `user-${Date.now()}`, 
+      name,
+      isFacilitator: name.trim() === 'Eric'
+    };
     setState(prevState => ({
         ...prevState,
         participants: [...prevState.participants, newParticipant],
@@ -113,6 +134,21 @@ export const useWorkshopState = () => {
       setState(prevState => ({ ...prevState, currentStage: stage }));
   };
 
+  const setFlowchartEditor = (updater: React.SetStateAction<FlowchartEditorState>) => {
+    setState(prevState => ({
+      ...prevState,
+      flowchartEditor: typeof updater === 'function' ? updater(prevState.flowchartEditor) : updater,
+    }));
+  };
+
+  const setIsVoting = (updater: React.SetStateAction<boolean>) => {
+    setState(prevState => ({
+      ...prevState,
+      isVoting: typeof updater === 'function' ? updater(prevState.isVoting) : updater,
+    }));
+  };
+
+
   return {
     state,
     setStickyNotes,
@@ -121,5 +157,7 @@ export const useWorkshopState = () => {
     addParticipant,
     setWorkshopStatus,
     setCurrentStage,
+    setFlowchartEditor,
+    setIsVoting,
   };
 };

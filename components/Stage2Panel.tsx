@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import type { IntentType, StickyNoteType, FlowchartType, FlowStepType } from '../types';
+import type { IntentType, StickyNoteType, FlowchartType, FlowStepType, FlowchartEditorState } from '../types';
 import { FlowStepActor } from '../types';
 import { PlusIcon, UserIcon, BotIcon, TrashIcon } from './icons';
 
@@ -16,30 +17,36 @@ const ActivityDescription: React.FC<{ title: string; duration: number; descripti
     </div>
 );
 
-// FIX: Define Stage2PanelProps interface to type the component's props.
 interface Stage2PanelProps {
   intents: IntentType[];
   stickyNotes: StickyNoteType[];
   flowcharts: FlowchartType[];
   setFlowcharts: React.Dispatch<React.SetStateAction<FlowchartType[]>>;
+  flowchartEditor: FlowchartEditorState;
+  setFlowchartEditor: (updater: React.SetStateAction<FlowchartEditorState>) => void;
 }
 
-const Stage2Panel: React.FC<Stage2PanelProps> = ({ intents, stickyNotes, flowcharts, setFlowcharts }) => {
+const Stage2Panel: React.FC<Stage2PanelProps> = ({ intents, stickyNotes, flowcharts, setFlowcharts, flowchartEditor, setFlowchartEditor }) => {
   const [activity, setActivity] = useState<3 | 4>(3);
-  const [selectedIntentId, setSelectedIntentId] = useState<string>('');
-  const [currentSteps, setCurrentSteps] = useState<FlowStepType[]>([]);
+  const { selectedIntentId, currentSteps } = flowchartEditor;
   const [newStep, setNewStep] = useState({ actor: FlowStepActor.User, description: '' });
 
   const intentsWithNotes = intents.filter(intent => stickyNotes.some(note => note.intentId === intent.id));
 
   const handleAddStep = () => {
     if (newStep.description.trim() === '') return;
-    setCurrentSteps(prev => [...prev, { ...newStep, id: `step-${Date.now()}` }]);
+    setFlowchartEditor(prev => ({
+      ...prev,
+      currentSteps: [...prev.currentSteps, { ...newStep, id: `step-${Date.now()}` }],
+    }));
     setNewStep({ actor: newStep.actor, description: '' }); // Keep the actor for next step
   };
   
   const handleDeleteStep = (stepId: string) => {
-    setCurrentSteps(prev => prev.filter(step => step.id !== stepId));
+    setFlowchartEditor(prev => ({
+      ...prev,
+      currentSteps: prev.currentSteps.filter(step => step.id !== stepId),
+    }));
   }
 
   const handleSaveFlowchart = () => {
@@ -53,8 +60,8 @@ const Stage2Panel: React.FC<Stage2PanelProps> = ({ intents, stickyNotes, flowcha
       votes: 0
     };
     setFlowcharts(prev => [...prev, newFlowchart]);
-    setCurrentSteps([]);
-    setSelectedIntentId('');
+    // Reset editor for next creation
+    setFlowchartEditor({ selectedIntentId: '', currentSteps: [] });
   };
 
   return (
@@ -72,7 +79,7 @@ const Stage2Panel: React.FC<Stage2PanelProps> = ({ intents, stickyNotes, flowcha
               <h4 className="font-bold text-lg mb-4 text-slate-700">流程設計器</h4>
               <select 
                 value={selectedIntentId}
-                onChange={(e) => setSelectedIntentId(e.target.value)}
+                onChange={(e) => setFlowchartEditor({ selectedIntentId: e.target.value, currentSteps: [] })}
                 className="w-full p-3 bg-white border-2 border-slate-200 rounded-lg mb-4 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
               >
                 <option value="">選擇一個意圖開始設計...</option>

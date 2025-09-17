@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import type { FlowchartType, MatrixQuadrant } from '../types';
 import { VoteIcon } from './icons';
@@ -72,14 +73,15 @@ const FlowchartCard: React.FC<FlowchartCardProps> = ({ flowchart, isVoting, onVo
     </div>
 );
 
-// FIX: Define Stage3PanelProps interface to type the component's props.
 interface Stage3PanelProps {
     flowcharts: FlowchartType[];
     setFlowcharts: React.Dispatch<React.SetStateAction<FlowchartType[]>>;
+    isVoting: boolean;
+    setIsVoting: React.Dispatch<React.SetStateAction<boolean>>;
+    isFacilitator: boolean;
 }
 
-const Stage3Panel: React.FC<Stage3PanelProps> = ({ flowcharts, setFlowcharts }) => {
-    const [isVoting, setIsVoting] = useState(false);
+const Stage3Panel: React.FC<Stage3PanelProps> = ({ flowcharts, setFlowcharts, isVoting, setIsVoting, isFacilitator }) => {
     const VOTE_LIMIT = 3;
     const [votesUsed, setVotesUsed] = useState(0);
 
@@ -155,17 +157,24 @@ const Stage3Panel: React.FC<Stage3PanelProps> = ({ flowcharts, setFlowcharts }) 
       </div>
       
       <div className="mt-8 flex justify-center items-center gap-4">
+        {isFacilitator ? (
           <button 
             onClick={() => setIsVoting(!isVoting)} 
             className={`px-8 py-3 rounded-lg font-bold text-lg transition-all transform hover:scale-105 shadow-lg ${isVoting ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-gradient-to-r from-indigo-600 to-blue-500 text-white shadow-indigo-500/30'}`}
           >
             {isVoting ? '結束投票' : '開始投票'}
           </button>
-          {isVoting && (
-            <div className="text-lg font-semibold bg-amber-200 text-amber-900 px-4 py-2 rounded-lg shadow-sm">
-                剩餘票數: <span className="font-black">{VOTE_LIMIT - votesUsed}</span>
-            </div>
-          )}
+        ) : (
+          <div className="text-lg font-semibold bg-slate-200 text-slate-700 px-4 py-3 rounded-lg shadow-sm">
+            {isVoting ? '投票進行中...' : '等待主持人開始投票...'}
+          </div>
+        )}
+
+        {isVoting && (
+          <div className="text-lg font-semibold bg-amber-200 text-amber-900 px-4 py-2 rounded-lg shadow-sm">
+              剩餘票數: <span className="font-black">{VOTE_LIMIT - votesUsed}</span>
+          </div>
+        )}
       </div>
 
     </div>
