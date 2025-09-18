@@ -6,7 +6,7 @@ import Stage4Panel from './components/Stage4Panel';
 import Timer from './components/Timer';
 import LoginScreen from './components/LoginScreen';
 import ParticipantAvatars from './components/ParticipantAvatars';
-import { useWorkshopState } from './hooks/useWorkshopState';
+import { useFirebaseWorkshopState as useWorkshopState } from './hooks/useFirebaseWorkshopState';
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon } from './components/icons';
 
 const STAGE_CONFIG = [
@@ -21,6 +21,7 @@ function App() {
 
   const {
     state,
+    isLoading,
     addParticipant,
     setWorkshopStatus,
     setCurrentStage,
@@ -80,6 +81,17 @@ function App() {
       setWorkshopStatus('not_started');
     }
   };
+  
+  if (isLoading) {
+    return (
+        <div className="fixed inset-0 bg-[#3f2b68] flex items-center justify-center p-4 font-sans text-white">
+            <div className="text-center">
+                <h1 className="text-4xl font-black tracking-tight animate-pulse">AI Workshop</h1>
+                <p className="mt-2">Connecting to workshop...</p>
+            </div>
+        </div>
+    );
+  }
 
   if (status === 'not_started' || !localParticipant) {
     return (
