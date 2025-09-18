@@ -31,6 +31,7 @@ function App() {
     setFlowcharts,
     setFlowchartEditorForGroup,
     setIsVoting,
+    resetWorkshop,
   } = useWorkshopState();
 
   const { status, currentStage, participants, stickyNotes, intents, groups, flowcharts, flowchartEditor, isVoting } = state;
@@ -48,6 +49,14 @@ function App() {
     setWorkshopStatus('in_progress');
   };
 
+  const handleReset = () => {
+    if (window.confirm('您確定要重置整個工作坊嗎？所有資料都將被清除。')) {
+      resetWorkshop();
+      sessionStorage.removeItem('participantId');
+      window.location.reload();
+    }
+  };
+
   const goToNextStage = () => {
     if (!isFacilitator) return;
     if (currentStage < STAGE_CONFIG.length) {
@@ -60,9 +69,16 @@ function App() {
   const goToPrevStage = () => {
     if (!isFacilitator) return;
     if (status === 'completed') {
+      // When going back from the 'completed' screen, we should be on the last active stage.
+      // currentStage is already STAGE_CONFIG.length, so we just change the status.
       setWorkshopStatus('in_progress');
+      return;
     }
-    setCurrentStage(Math.max(1, currentStage - 1));
+    if (currentStage > 1) {
+      setCurrentStage(currentStage - 1);
+    } else { // currentStage is 1
+      setWorkshopStatus('not_started');
+    }
   };
 
   if (status === 'not_started' || !localParticipant) {
@@ -72,6 +88,7 @@ function App() {
         participants={participants}
         onJoin={handleJoin}
         onStart={handleStart}
+        onReset={handleReset}
         hasJoined={!!localParticipant}
       />
     );
@@ -137,11 +154,10 @@ function App() {
             <>
               <button 
                 onClick={goToPrevStage}
-                disabled={currentStage === 1 && !isWorkshopComplete}
                 className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-300 text-slate-700 rounded-xl font-bold hover:bg-slate-100 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105"
               >
                 <ChevronLeftIcon className="w-5 h-5" />
-                上一步
+                {currentStage === 1 && !isWorkshopComplete ? '返回主頁' : '上一步'}
               </button>
               <button 
                 onClick={goToNextStage}

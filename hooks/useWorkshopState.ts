@@ -93,6 +93,15 @@ export const useWorkshopState = () => {
     };
   }, [handleStorageChange]);
 
+  const resetWorkshop = () => {
+    try {
+      localStorage.removeItem(WORKSHOP_STATE_KEY);
+      setState(getInitialState());
+    } catch (error) {
+      console.error("Error resetting workshop state", error);
+    }
+  };
+
   // --- Action Dispatchers ---
   const setStickyNotes = (updater: React.SetStateAction<StickyNoteType[]>) => {
     setState(prevState => ({
@@ -187,5 +196,6 @@ export const useWorkshopState = () => {
     setCurrentStage,
     setFlowchartEditorForGroup,
     setIsVoting,
+    resetWorkshop,
   };
 };

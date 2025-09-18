@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import type { Participant } from '../types';
-import { UserIcon } from './icons';
+import { UserIcon, TrashIcon } from './icons';
 
 interface LoginScreenProps {
   isFacilitator: boolean;
@@ -9,9 +9,10 @@ interface LoginScreenProps {
   hasJoined: boolean;
   onJoin: (name: string) => void;
   onStart: () => void;
+  onReset: () => void;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ isFacilitator, participants, hasJoined, onJoin, onStart }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ isFacilitator, participants, hasJoined, onJoin, onStart, onReset }) => {
   const [name, setName] = useState('');
 
   const handleJoinSubmit = (e: React.FormEvent) => {
@@ -53,13 +54,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ isFacilitator, participants, 
   const renderFacilitatorView = () => (
     <div className="text-center">
         <h2 className="text-2xl font-bold text-slate-800 mb-4">主持人控制台</h2>
-        <button
-            onClick={onStart}
-            disabled={participants.length === 0}
-            className="w-full bg-gradient-to-r from-indigo-600 to-blue-500 text-white text-lg font-bold py-4 px-4 rounded-lg hover:opacity-90 transition-all shadow-lg shadow-indigo-500/30 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
-        >
-            開始工作坊 ({participants.length})
-        </button>
+        <div className="space-y-3">
+            <button
+                onClick={onStart}
+                disabled={participants.length === 0}
+                className="w-full bg-gradient-to-r from-indigo-600 to-blue-500 text-white text-lg font-bold py-4 px-4 rounded-lg hover:opacity-90 transition-all shadow-lg shadow-indigo-500/30 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+            >
+                開始工作坊 ({participants.length})
+            </button>
+            <button
+                onClick={onReset}
+                className="w-full flex items-center justify-center gap-2 bg-red-600 text-white text-sm font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-all transform hover:scale-105 disabled:opacity-50"
+            >
+                <TrashIcon className="w-4 h-4" />
+                重置工作坊
+            </button>
+        </div>
         <div className="mt-6">
             <h3 className="font-bold text-slate-600 mb-3">已加入的參與者:</h3>
             <div className="max-h-60 overflow-y-auto space-y-2 bg-slate-100 p-3 rounded-lg">
