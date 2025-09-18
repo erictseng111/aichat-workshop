@@ -1,9 +1,10 @@
 import React from 'react';
-import type { FlowchartType, MatrixQuadrant } from '../types';
+import type { FlowchartType, MatrixQuadrant, Group } from '../types';
 import { TrophyIcon, SparklesIcon, VoteIcon } from './icons';
 
 interface Stage4PanelProps {
   flowcharts: FlowchartType[];
+  groups: Group[];
 }
 
 const getQuadrantInfo = (quadrant: MatrixQuadrant | null) => {
@@ -23,19 +24,21 @@ const getMedalStyle = (index: number) => {
     return { border: 'border-slate-200', shadow: 'shadow-slate-500/10', bg: 'bg-white', iconColor: 'text-slate-400' };
 }
 
-const Stage4Panel: React.FC<Stage4PanelProps> = ({ flowcharts }) => {
+const Stage4Panel: React.FC<Stage4PanelProps> = ({ flowcharts, groups }) => {
   const sortedFlowcharts = [...flowcharts].sort((a, b) => b.votes - a.votes);
+
+  const getGroupName = (groupId: string) => groups.find(g => g.id === groupId)?.name;
 
   return (
     <div className="space-y-12">
-      {/* Voting Summary Section */}
       <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl shadow-md border border-slate-200/80">
-        <h3 className="text-2xl font-bold text-slate-800 text-center">活動六：投票結果總覽</h3>
+        <h3 className="text-2xl font-bold text-slate-800 text-center">活動七：投票結果總覽</h3>
         <p className="text-slate-500 mt-1 text-center mb-8">基於團隊共識，以下是本次工作坊的重點方案排序：</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedFlowcharts.map((flowchart, index) => {
             const quadrantInfo = getQuadrantInfo(flowchart.matrixPosition);
             const medalStyle = getMedalStyle(index);
+            const groupName = getGroupName(flowchart.groupId);
             return (
               <div 
                 key={flowchart.id} 
@@ -43,9 +46,12 @@ const Stage4Panel: React.FC<Stage4PanelProps> = ({ flowcharts }) => {
               >
                 <div className="flex justify-between items-start">
                     <div>
-                        <span className={`inline-block px-3 py-1 text-xs font-bold rounded-full ${quadrantInfo.style} mb-2`}>
-                            {quadrantInfo.label}
-                        </span>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          <span className={`inline-block px-3 py-1 text-xs font-bold rounded-full ${quadrantInfo.style}`}>
+                              {quadrantInfo.label}
+                          </span>
+                          {groupName && <span className="inline-block px-3 py-1 text-xs font-bold rounded-full bg-indigo-100 text-indigo-800">{groupName}</span>}
+                        </div>
                         <h4 className="text-lg font-bold text-slate-800">{flowchart.title}</h4>
                     </div>
                     {index < 3 && <TrophyIcon className={`w-8 h-8 flex-shrink-0 ${medalStyle.iconColor}`} />}
@@ -62,7 +68,6 @@ const Stage4Panel: React.FC<Stage4PanelProps> = ({ flowcharts }) => {
         </div>
       </div>
 
-      {/* Next Actions Section */}
       <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-8 rounded-2xl shadow-2xl border border-slate-700">
          <h3 className="text-3xl font-black text-center mb-2">後續行動 (Next Actions)</h3>
          <p className="text-slate-300 text-center mb-8 max-w-3xl mx-auto">工作坊的結束是專案的開始。下一步將由 Eric 和顧問負責人推動以下事項：</p>
@@ -82,7 +87,6 @@ const Stage4Panel: React.FC<Stage4PanelProps> = ({ flowcharts }) => {
          </div>
       </div>
 
-      {/* Celebration Section */}
       <div className="text-center py-10">
         <div className="inline-flex items-center justify-center p-4 bg-green-100 rounded-full mb-4">
             <SparklesIcon className="w-12 h-12 text-green-600" />

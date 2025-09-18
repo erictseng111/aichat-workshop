@@ -77,23 +77,31 @@ const Stage1Panel: React.FC<Stage1PanelProps> = ({ stickyNotes, setStickyNotes, 
   const handleDropOnIntent = (e: React.DragEvent<HTMLDivElement>, intentId: string) => {
     e.preventDefault();
     const noteId = e.dataTransfer.getData('noteId');
-    setStickyNotes(prevNotes => prevNotes.map(note =>
-      note.id === noteId ? { ...note, intentId } : note
-    ));
+    const currentNote = stickyNotes.find(n => n.id === noteId);
+
+    if (currentNote && currentNote.intentId !== intentId) {
+        setStickyNotes(prevNotes => prevNotes.map(note =>
+          note.id === noteId ? { ...note, intentId } : note
+        ));
+        setLastDroppedNoteId(noteId);
+        setTimeout(() => setLastDroppedNoteId(null), 500);
+    }
     setDragTarget(null);
-    setLastDroppedNoteId(noteId);
-    setTimeout(() => setLastDroppedNoteId(null), 500);
   };
   
   const handleDropOnBoard = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const noteId = e.dataTransfer.getData('noteId');
-    setStickyNotes(prevNotes => prevNotes.map(note =>
-      note.id === noteId ? { ...note, intentId: null } : note
-    ));
+    const currentNote = stickyNotes.find(n => n.id === noteId);
+
+    if (currentNote && currentNote.intentId !== null) {
+        setStickyNotes(prevNotes => prevNotes.map(note =>
+          note.id === noteId ? { ...note, intentId: null } : note
+        ));
+        setLastDroppedNoteId(noteId);
+        setTimeout(() => setLastDroppedNoteId(null), 500);
+    }
     setDragTarget(null);
-    setLastDroppedNoteId(noteId);
-    setTimeout(() => setLastDroppedNoteId(null), 500);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -160,12 +168,17 @@ const Stage1Panel: React.FC<Stage1PanelProps> = ({ stickyNotes, setStickyNotes, 
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
              <div 
-                className={`col-span-1 md:col-span-2 lg:col-span-3 p-4 rounded-lg border-2 min-h-[150px] transition-all duration-300 ${dragTarget === 'unclassified-board' ? 'border-solid ring-2 ring-indigo-400 bg-indigo-50' : 'border-dashed border-slate-300 bg-slate-100/70'}`}
+                className={`relative col-span-1 md:col-span-2 lg:col-span-3 p-4 rounded-lg border-2 min-h-[150px] transition-all duration-300 ${dragTarget === 'unclassified-board' ? 'border-solid ring-2 ring-indigo-400 bg-indigo-50' : 'border-dashed border-slate-300 bg-slate-100/70'}`}
                 onDrop={handleDropOnBoard}
                 onDragOver={handleDragOver}
                 onDragEnter={() => setDragTarget('unclassified-board')}
                 onDragLeave={() => setDragTarget(null)}
              >
+                {dragTarget === 'unclassified-board' && (
+                  <div className="absolute inset-0 bg-indigo-100/50 flex justify-center items-center rounded-lg pointer-events-none z-10">
+                      <p className="text-indigo-600 font-bold text-lg">Drop to Unclassify</p>
+                  </div>
+                )}
                 <h4 className="font-bold text-slate-700 mb-3 text-center">未分類便利貼</h4>
                 <div className="flex flex-wrap gap-3 justify-center">
                     {unclassifiedNotes.map((note) => {
@@ -182,12 +195,17 @@ const Stage1Panel: React.FC<Stage1PanelProps> = ({ stickyNotes, setStickyNotes, 
             {intents.map((intent) => (
               <div 
                 key={intent.id} 
-                className={`p-4 rounded-xl border-t-4 border-indigo-500 transition-all duration-300 ${dragTarget === intent.id ? 'ring-2 ring-indigo-400 scale-105 shadow-xl' : 'bg-white shadow-md'}`}
+                className={`relative p-4 rounded-xl border-t-4 border-indigo-500 transition-all duration-300 ${dragTarget === intent.id ? 'ring-2 ring-indigo-400 scale-105 shadow-xl' : 'bg-white shadow-md'}`}
                 onDrop={(e) => handleDropOnIntent(e, intent.id)}
                 onDragOver={handleDragOver}
                 onDragEnter={() => setDragTarget(intent.id)}
                 onDragLeave={() => setDragTarget(null)}
               >
+                {dragTarget === intent.id && (
+                  <div className="absolute inset-0 bg-indigo-100/50 flex justify-center items-center rounded-xl pointer-events-none z-10">
+                    <p className="text-indigo-600 font-bold text-lg">Assign to "{intent.name}"</p>
+                  </div>
+                )}
                 <h4 className="font-bold text-lg text-slate-800 mb-3">{intent.name}</h4>
                 <div className="space-y-2 min-h-[100px]">
                     {stickyNotes.filter(note => note.intentId === intent.id).map((note) => {

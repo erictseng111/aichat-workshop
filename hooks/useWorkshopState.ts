@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { StickyNoteType, IntentType, FlowchartType, Participant, WorkshopStatus, FlowchartEditorState } from '../types';
+import type { StickyNoteType, IntentType, FlowchartType, Participant, WorkshopStatus, FlowchartEditorState, Group, FlowchartEditorStepState } from '../types';
 
 const WORKSHOP_STATE_KEY = 'workshop_global_state';
 
@@ -9,6 +9,7 @@ interface WorkshopState {
   participants: Participant[];
   stickyNotes: StickyNoteType[];
   intents: IntentType[];
+  groups: Group[];
   flowcharts: FlowchartType[];
   flowchartEditor: FlowchartEditorState;
   isVoting: boolean;
@@ -18,7 +19,7 @@ const getInitialState = (): WorkshopState => {
   try {
     const item = localStorage.getItem(WORKSHOP_STATE_KEY);
     // Start with a few items for demonstration purposes if storage is empty
-    const defaultState = { 
+    const defaultState: Omit<WorkshopState, 'participants'> & { participants: Omit<Participant, 'groupId'>[] } = { 
         status: 'not_started',
         currentStage: 1,
         participants: [],
@@ -28,18 +29,21 @@ const getInitialState = (): WorkshopState => {
             { id: 'note-3', text: 'How can I reset my password?', intentId: null },
         ], 
         intents: [], 
+        groups: [],
         flowcharts: [],
-        flowchartEditor: {
-          selectedIntentId: '',
-          currentSteps: [],
-        },
+        flowchartEditor: {},
         isVoting: false,
     };
     
     const storedState = item ? JSON.parse(item) : {};
 
+    // Ensure all participants have a groupId
+    if (storedState.participants) {
+      storedState.participants = storedState.participants.map((p: Participant) => ({...p, groupId: p.groupId || null}))
+    }
+
     // Merge stored state with default, ensuring new properties exist
-    return { ...defaultState, ...storedState };
+    return { ...defaultState, ...storedState } as WorkshopState;
 
   } catch (error) {
     console.error("Error reading from localStorage", error);
@@ -49,11 +53,9 @@ const getInitialState = (): WorkshopState => {
         participants: [],
         stickyNotes: [], 
         intents: [], 
+        groups: [],
         flowcharts: [],
-        flowchartEditor: {
-          selectedIntentId: '',
-          currentSteps: [],
-        },
+        flowchartEditor: {},
         isVoting: false,
     };
   }
@@ -106,6 +108,22 @@ export const useWorkshopState = () => {
     }));
   };
 
+  const setGroups = (updater: React.SetStateAction<Group[]>) => {
+    setState(prevState => ({
+     ...prevState,
+     groups: typeof updater === 'function' ? updater(prevState.groups) : updater,
+   }));
+ };
+ 
+  const assignParticipantToGroup = (participantId: string, groupId: string | null) => {
+      setState(prevState => ({
+          ...prevState,
+          participants: prevState.participants.map(p =>
+              p.id === participantId ? { ...p, groupId } : p
+          ),
+      }));
+  };
+
   const setFlowcharts = (updater: React.SetStateAction<FlowchartType[]>) => {
      setState(prevState => ({
       ...prevState,
@@ -117,7 +135,8 @@ export const useWorkshopState = () => {
     const newParticipant: Participant = { 
       id: `user-${Date.now()}`, 
       name,
-      isFacilitator: name.trim() === 'Eric'
+      isFacilitator: name.trim() === 'Eric',
+      groupId: null,
     };
     setState(prevState => ({
         ...prevState,
@@ -134,11 +153,18 @@ export const useWorkshopState = () => {
       setState(prevState => ({ ...prevState, currentStage: stage }));
   };
 
-  const setFlowchartEditor = (updater: React.SetStateAction<FlowchartEditorState>) => {
-    setState(prevState => ({
-      ...prevState,
-      flowchartEditor: typeof updater === 'function' ? updater(prevState.flowchartEditor) : updater,
-    }));
+  const setFlowchartEditorForGroup = (groupId: string, updater: React.SetStateAction<FlowchartEditorStepState>) => {
+    setState(prevState => {
+        const currentGroupEditorState = prevState.flowchartEditor[groupId] || { selectedIntentId: '', currentSteps: [] };
+        const newGroupEditorState = typeof updater === 'function' ? updater(currentGroupEditorState) : updater;
+        return {
+            ...prevState,
+            flowchartEditor: {
+                ...prevState.flowchartEditor,
+                [groupId]: newGroupEditorState
+            }
+        };
+    });
   };
 
   const setIsVoting = (updater: React.SetStateAction<boolean>) => {
@@ -153,11 +179,13 @@ export const useWorkshopState = () => {
     state,
     setStickyNotes,
     setIntents,
+    setGroups,
+    assignParticipantToGroup,
     setFlowcharts,
     addParticipant,
     setWorkshopStatus,
     setCurrentStage,
-    setFlowchartEditor,
+    setFlowchartEditorForGroup,
     setIsVoting,
   };
 };

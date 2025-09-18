@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Stage1Panel from './components/Stage1Panel';
 import Stage2Panel from './components/Stage2Panel';
@@ -13,8 +12,8 @@ import { CheckIcon, ChevronLeftIcon, ChevronRightIcon } from './components/icons
 const STAGE_CONFIG = [
   { id: 1, title: "痛點盤點與情境定義", duration: 25 },
   { id: 2, title: "任務導向流程設計", duration: 35 },
-  { id: 3, title: "方案共識與優先排序", duration: 30 },
-  { id: 4, title: "總結與後續步驟", duration: 15 },
+  { id: 3, title: "方案共識與優先排序", duration: 15 },
+  { id: 4, title: "總結與後續步驟", duration: 10 },
 ];
 
 function App() {
@@ -27,12 +26,14 @@ function App() {
     setCurrentStage,
     setStickyNotes,
     setIntents,
+    setGroups,
+    assignParticipantToGroup,
     setFlowcharts,
-    setFlowchartEditor,
+    setFlowchartEditorForGroup,
     setIsVoting,
   } = useWorkshopState();
 
-  const { status, currentStage, participants, stickyNotes, intents, flowcharts, flowchartEditor, isVoting } = state;
+  const { status, currentStage, participants, stickyNotes, intents, groups, flowcharts, flowchartEditor, isVoting } = state;
 
   const localParticipant = participants.find(p => p.id === localParticipantId);
   const isFacilitator = localParticipant?.isFacilitator || false;
@@ -58,17 +59,16 @@ function App() {
 
   const goToPrevStage = () => {
     if (!isFacilitator) return;
-    // If the workshop was completed, going back puts it back in progress.
     if (status === 'completed') {
       setWorkshopStatus('in_progress');
     }
     setCurrentStage(Math.max(1, currentStage - 1));
   };
 
-  if (status === 'not_started') {
+  if (status === 'not_started' || !localParticipant) {
     return (
       <LoginScreen
-        isFacilitator={isFacilitator}
+        isFacilitator={localParticipant?.isFacilitator ?? false}
         participants={participants}
         onJoin={handleJoin}
         onStart={handleStart}
@@ -93,12 +93,10 @@ function App() {
                 <div className="flex-grow">
                     <ol className="flex items-center">
                         {STAGE_CONFIG.map((stage, index) => {
-                            const isCompleted = currentStage > stage.id;
-                            const isCurrent = currentStage === stage.id;
-                            const isParticipantAndLocked = !isFacilitator && !isCurrent;
-
+                            const isCompleted = currentStage > stage.id || isWorkshopComplete;
+                            const isCurrent = currentStage === stage.id && !isWorkshopComplete;
                             return (
-                                <li key={stage.id} className={`flex items-center ${index < STAGE_CONFIG.length - 1 ? 'flex-1' : ''} transition-opacity ${isParticipantAndLocked ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                                <li key={stage.id} className={`flex items-center ${index < STAGE_CONFIG.length - 1 ? 'flex-1' : ''}`}>
                                     <div className="flex flex-col items-center text-center">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg transition-all duration-300
                                             ${isCompleted ? 'bg-indigo-600 text-white' : ''}
@@ -112,7 +110,7 @@ function App() {
                                     
                                     {index < STAGE_CONFIG.length - 1 && (
                                         <div className="flex-1 h-1 bg-slate-200 mx-4 relative">
-                                            <div className={`absolute top-0 left-0 h-1 bg-indigo-600 transition-all duration-500 ${currentStage > stage.id ? 'w-full' : 'w-0'}`}></div>
+                                            <div className={`absolute top-0 left-0 h-1 bg-indigo-600 transition-all duration-500 ${currentStage > stage.id || isWorkshopComplete ? 'w-full' : 'w-0'}`}></div>
                                         </div>
                                     )}
                                 </li>
@@ -129,9 +127,9 @@ function App() {
         
         <main>
           {currentStage === 1 && <Stage1Panel stickyNotes={stickyNotes} setStickyNotes={setStickyNotes} intents={intents} setIntents={setIntents} />}
-          {currentStage === 2 && <Stage2Panel intents={intents} stickyNotes={stickyNotes} flowcharts={flowcharts} setFlowcharts={setFlowcharts} flowchartEditor={flowchartEditor} setFlowchartEditor={setFlowchartEditor} />}
-          {currentStage === 3 && <Stage3Panel flowcharts={flowcharts} setFlowcharts={setFlowcharts} isVoting={isVoting} setIsVoting={setIsVoting} isFacilitator={isFacilitator} />}
-          {currentStage === 4 && <Stage4Panel flowcharts={flowcharts} />}
+          {currentStage === 2 && <Stage2Panel intents={intents} stickyNotes={stickyNotes} flowcharts={flowcharts} setFlowcharts={setFlowcharts} flowchartEditor={flowchartEditor} setFlowchartEditorForGroup={setFlowchartEditorForGroup} participants={participants} groups={groups} setGroups={setGroups} assignParticipantToGroup={assignParticipantToGroup} localParticipant={localParticipant} isFacilitator={isFacilitator} />}
+          {currentStage === 3 && <Stage3Panel flowcharts={flowcharts} setFlowcharts={setFlowcharts} groups={groups} isVoting={isVoting} setIsVoting={setIsVoting} isFacilitator={isFacilitator} />}
+          {currentStage === 4 && <Stage4Panel flowcharts={flowcharts} groups={groups} />}
         </main>
         
         <footer className={`mt-10 flex ${isFacilitator ? 'justify-between' : 'justify-center'} items-center`}>
@@ -139,7 +137,7 @@ function App() {
             <>
               <button 
                 onClick={goToPrevStage}
-                disabled={currentStage === 1}
+                disabled={currentStage === 1 && !isWorkshopComplete}
                 className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-300 text-slate-700 rounded-xl font-bold hover:bg-slate-100 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105"
               >
                 <ChevronLeftIcon className="w-5 h-5" />

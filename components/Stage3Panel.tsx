@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import type { FlowchartType, MatrixQuadrant } from '../types';
+import type { FlowchartType, MatrixQuadrant, Group } from '../types';
 import { VoteIcon } from './icons';
 
 interface QuadrantProps {
@@ -49,13 +48,14 @@ const Quadrant: React.FC<QuadrantProps> = ({ title, quadrant, bgColor, textColor
 
 interface FlowchartCardProps {
     flowchart: FlowchartType;
+    groupName?: string;
     isVoting: boolean;
     onVote: (id: string) => void;
     onDragStart: (e: React.DragEvent<HTMLDivElement>, id: string) => void;
     justDropped: boolean;
 }
 
-const FlowchartCard: React.FC<FlowchartCardProps> = ({ flowchart, isVoting, onVote, onDragStart, justDropped }) => (
+const FlowchartCard: React.FC<FlowchartCardProps> = ({ flowchart, groupName, isVoting, onVote, onDragStart, justDropped }) => (
     <div
         draggable={!isVoting}
         onDragStart={(e) => onDragStart(e, flowchart.id)}
@@ -64,6 +64,7 @@ const FlowchartCard: React.FC<FlowchartCardProps> = ({ flowchart, isVoting, onVo
             ${justDropped ? 'animate-drop-in' : ''}`}
         onClick={() => isVoting && onVote(flowchart.id)}
     >
+        {groupName && <div className="text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full inline-block mb-1.5">{groupName}</div>}
         <p className="font-semibold text-slate-800">{flowchart.title}</p>
         <div className="flex items-center gap-1 text-amber-500 mt-2">
            <VoteIcon className="w-5 h-5" />
@@ -76,16 +77,16 @@ const FlowchartCard: React.FC<FlowchartCardProps> = ({ flowchart, isVoting, onVo
 interface Stage3PanelProps {
     flowcharts: FlowchartType[];
     setFlowcharts: React.Dispatch<React.SetStateAction<FlowchartType[]>>;
+    groups: Group[];
     isVoting: boolean;
     setIsVoting: React.Dispatch<React.SetStateAction<boolean>>;
     isFacilitator: boolean;
 }
 
-const Stage3Panel: React.FC<Stage3PanelProps> = ({ flowcharts, setFlowcharts, isVoting, setIsVoting, isFacilitator }) => {
+const Stage3Panel: React.FC<Stage3PanelProps> = ({ flowcharts, setFlowcharts, groups, isVoting, setIsVoting, isFacilitator }) => {
     const VOTE_LIMIT = 3;
     const [votesUsed, setVotesUsed] = useState(0);
 
-    // State for D&D feedback
     const [dropHighlight, setDropHighlight] = useState<MatrixQuadrant | null>(null);
     const [lastDroppedFlowchartId, setLastDroppedFlowchartId] = useState<string | null>(null);
 
@@ -110,6 +111,8 @@ const Stage3Panel: React.FC<Stage3PanelProps> = ({ flowcharts, setFlowcharts, is
         setFlowcharts(prev => prev.map(f => f.id === id ? { ...f, votes: f.votes + 1 } : f));
         setVotesUsed(prev => prev + 1);
     };
+    
+    const getGroupName = (groupId: string) => groups.find(g => g.id === groupId)?.name;
 
     const unassignedFlowcharts = flowcharts.filter(f => f.matrixPosition === null);
 
@@ -117,7 +120,7 @@ const Stage3Panel: React.FC<Stage3PanelProps> = ({ flowcharts, setFlowcharts, is
     <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl shadow-md border border-slate-200/80">
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h3 className="text-2xl font-bold text-slate-800">活動五：方案評估與共識票選</h3>
+          <h3 className="text-2xl font-bold text-slate-800">活動六：方案評估與共識票選</h3>
           <p className="text-slate-500 mt-1">透過艾森豪矩陣達成下一步行動的共識，並透過三點投票建立共識。</p>
         </div>
         <span className="text-lg font-semibold text-indigo-600 bg-indigo-100 px-4 py-1.5 rounded-full">15 分鐘</span>
@@ -128,28 +131,28 @@ const Stage3Panel: React.FC<Stage3PanelProps> = ({ flowcharts, setFlowcharts, is
           <h4 className="font-bold text-center mb-4 text-slate-700">待辦方案</h4>
           <div className="space-y-3">
             {unassignedFlowcharts.map(f => (
-                <FlowchartCard key={f.id} flowchart={f} isVoting={isVoting} onVote={handleVote} onDragStart={handleDragStart} justDropped={lastDroppedFlowchartId === f.id} />
+                <FlowchartCard key={f.id} flowchart={f} groupName={getGroupName(f.groupId)} isVoting={isVoting} onVote={handleVote} onDragStart={handleDragStart} justDropped={lastDroppedFlowchartId === f.id} />
             ))}
              {unassignedFlowcharts.length === 0 && <p className="text-slate-400 text-center pt-8">將方案拖曳至右方矩陣</p>}
           </div>
         </div>
         
         <div className="lg:col-span-3">
-          <div className="relative">
-            <div className="absolute top-1/2 -left-12 text-center -rotate-90 font-bold text-slate-600">重要</div>
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-8 text-center font-bold text-slate-600">緊急</div>
+          <div className="relative pt-10 pl-16">
+            <div className="absolute top-1/2 left-0 -translate-y-1/2 -rotate-90 text-xl font-bold text-slate-700">重要</div>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 text-xl font-bold text-slate-700">緊急</div>
             <div className="grid grid-cols-2 gap-4">
                 <Quadrant title="Q1: 立即開發 (MVP)" quadrant="q1" bgColor="bg-red-100" textColor="text-red-800" onDrop={handleDrop} justDropped={dropHighlight === 'q1'}>
-                    {flowcharts.filter(f=>f.matrixPosition === 'q1').map(f=><FlowchartCard key={f.id} flowchart={f} isVoting={isVoting} onVote={handleVote} onDragStart={handleDragStart} justDropped={lastDroppedFlowchartId === f.id} />)}
+                    {flowcharts.filter(f=>f.matrixPosition === 'q1').map(f=><FlowchartCard key={f.id} flowchart={f} groupName={getGroupName(f.groupId)} isVoting={isVoting} onVote={handleVote} onDragStart={handleDragStart} justDropped={lastDroppedFlowchartId === f.id} />)}
                 </Quadrant>
                 <Quadrant title="Q2: 中長期規劃" quadrant="q2" bgColor="bg-green-100" textColor="text-green-800" onDrop={handleDrop} justDropped={dropHighlight === 'q2'}>
-                     {flowcharts.filter(f=>f.matrixPosition === 'q2').map(f=><FlowchartCard key={f.id} flowchart={f} isVoting={isVoting} onVote={handleVote} onDragStart={handleDragStart} justDropped={lastDroppedFlowchartId === f.id} />)}
+                     {flowcharts.filter(f=>f.matrixPosition === 'q2').map(f=><FlowchartCard key={f.id} flowchart={f} groupName={getGroupName(f.groupId)} isVoting={isVoting} onVote={handleVote} onDragStart={handleDragStart} justDropped={lastDroppedFlowchartId === f.id} />)}
                 </Quadrant>
                 <Quadrant title="Q3: 簡單腳本處理" quadrant="q3" bgColor="bg-yellow-100" textColor="text-yellow-800" onDrop={handleDrop} justDropped={dropHighlight === 'q3'}>
-                     {flowcharts.filter(f=>f.matrixPosition === 'q3').map(f=><FlowchartCard key={f.id} flowchart={f} isVoting={isVoting} onVote={handleVote} onDragStart={handleDragStart} justDropped={lastDroppedFlowchartId === f.id} />)}
+                     {flowcharts.filter(f=>f.matrixPosition === 'q3').map(f=><FlowchartCard key={f.id} flowchart={f} groupName={getGroupName(f.groupId)} isVoting={isVoting} onVote={handleVote} onDragStart={handleDragStart} justDropped={lastDroppedFlowchartId === f.id} />)}
                 </Quadrant>
                 <Quadrant title="Q4: 暫不考慮" quadrant="q4" bgColor="bg-slate-200" textColor="text-slate-800" onDrop={handleDrop} justDropped={dropHighlight === 'q4'}>
-                     {flowcharts.filter(f=>f.matrixPosition === 'q4').map(f=><FlowchartCard key={f.id} flowchart={f} isVoting={isVoting} onVote={handleVote} onDragStart={handleDragStart} justDropped={lastDroppedFlowchartId === f.id} />)}
+                     {flowcharts.filter(f=>f.matrixPosition === 'q4').map(f=><FlowchartCard key={f.id} flowchart={f} groupName={getGroupName(f.groupId)} isVoting={isVoting} onVote={handleVote} onDragStart={handleDragStart} justDropped={lastDroppedFlowchartId === f.id} />)}
                 </Quadrant>
             </div>
           </div>
